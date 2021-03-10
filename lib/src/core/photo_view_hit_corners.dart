@@ -59,10 +59,13 @@ mixin HitCornersDetector on PhotoViewControllerDelegate {
   }
 
   bool shouldMove(Offset move, Axis mainAxis) {
-    if (mainAxis == Axis.vertical) {
-      return _shouldMoveY(move);
-    }
-    return _shouldMoveX(move);
+    // force check on both axises
+    return _shouldMoveY(move) || _shouldMoveX(move);
+
+    //if (mainAxis == Axis.vertical) {
+    //  return _shouldMoveY(move);
+    //}
+    //return _shouldMoveX(move);
   }
 }
 
