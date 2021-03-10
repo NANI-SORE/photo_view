@@ -150,7 +150,11 @@ class PhotoViewGestureRecognizer extends ScaleGestureRecognizer {
       return;
     }
     final move = _initialFocalPoint! - _currentFocalPoint!;
-    final bool shouldMove = hitDetector!.shouldMove(move, validateAxis!);
+
+    // force check on both axises
+    final vertical = move.dy.abs() > move.dx.abs();
+    final bool shouldMove = vertical ? hitDetector!.shouldMove(move, Axis.vertical) : hitDetector!.shouldMove(move, Axis.horizontal);
+    // final bool shouldMove = hitDetector!.shouldMove(move, validateAxis!);
     if (shouldMove || _pointerLocations.keys.length > 1) {
       acceptGesture(event.pointer);
     }
