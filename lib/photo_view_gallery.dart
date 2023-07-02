@@ -28,7 +28,7 @@ typedef PhotoViewGalleryBuilder = PhotoViewGalleryPageOptions Function(
 ///
 /// Some of [PhotoView] constructor options are passed direct to [PhotoViewGallery] constructor. Those options will affect the gallery in a whole.
 ///
-/// Some of the options may be defined to each image individually, such as `initialScale` or `heroAttributes`. Those must be passed via each [PhotoViewGalleryPageOptions].
+/// Some of the options may be defined to each image individually, such as `initialScale` or `PhotoViewHeroAttributes`. Those must be passed via each [PhotoViewGalleryPageOptions].
 ///
 /// Example of usage as a list of options:
 /// ```
@@ -36,11 +36,11 @@ typedef PhotoViewGalleryBuilder = PhotoViewGalleryPageOptions Function(
 ///   pageOptions: <PhotoViewGalleryPageOptions>[
 ///     PhotoViewGalleryPageOptions(
 ///       imageProvider: AssetImage("assets/gallery1.jpg"),
-///       heroAttributes: const HeroAttributes(tag: "tag1"),
+///       heroAttributes: const PhotoViewHeroAttributes(tag: "tag1"),
 ///     ),
 ///     PhotoViewGalleryPageOptions(
 ///       imageProvider: AssetImage("assets/gallery2.jpg"),
-///       heroAttributes: const HeroAttributes(tag: "tag2"),
+///       heroAttributes: const PhotoViewHeroAttributes(tag: "tag2"),
 ///       maxScale: PhotoViewComputedScale.contained * 0.3
 ///     ),
 ///     PhotoViewGalleryPageOptions(
@@ -280,6 +280,7 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             controller: pageOption.controller,
             scaleStateController: pageOption.scaleStateController,
             customSize: widget.customSize,
+            semanticLabel: pageOption.semanticLabel,
             gaplessPlayback: widget.gaplessPlayback,
             heroAttributes: pageOption.heroAttributes,
             scaleStateChangedCallback: scaleStateChangedCallback,
@@ -322,6 +323,7 @@ class PhotoViewGalleryPageOptions {
     Key? key,
     required this.imageProvider,
     this.heroAttributes,
+    this.semanticLabel,
     this.minScale,
     this.maxScale,
     this.initialScale,
@@ -343,6 +345,7 @@ class PhotoViewGalleryPageOptions {
 
   PhotoViewGalleryPageOptions.customChild({
     required this.child,
+    this.semanticLabel,
     this.childSize,
     this.heroAttributes,
     this.minScale,
@@ -367,6 +370,9 @@ class PhotoViewGalleryPageOptions {
 
   /// Mirror to [PhotoView.heroAttributes]
   final PhotoViewHeroAttributes? heroAttributes;
+
+  /// Mirror to [PhotoView.semanticLabel]
+  final String? semanticLabel;
 
   /// Mirror to [PhotoView.minScale]
   final dynamic minScale;
