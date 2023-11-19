@@ -271,9 +271,8 @@ class DoubleTapAndTapDragZoomGestureRecognizer
     }
 
     // If second tap is not allowed, reset the state.
-    final bool isPointerAllowed =
-        supportedDevices == null || supportedDevices!.contains(event.kind);
-    if (isPointerAllowed == false) {
+    final bool isPointerAllowed = super.isPointerAllowed(event);
+    if (!isPointerAllowed) {
       _reset();
     }
     return isPointerAllowed;

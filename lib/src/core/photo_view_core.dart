@@ -38,7 +38,7 @@ class PhotoViewCore extends StatefulWidget {
     required this.gestureDetectorBehavior,
     required this.controller,
     required this.scaleBoundaries,
-    this.scaleStateCycle,
+    required this.scaleStateCycle,
     required this.scaleStateController,
     required this.basePosition,
     required this.tightMode,
@@ -63,7 +63,7 @@ class PhotoViewCore extends StatefulWidget {
     this.gestureDetectorBehavior,
     required this.controller,
     required this.scaleBoundaries,
-    this.scaleStateCycle,
+    required this.scaleStateCycle,
     required this.scaleStateController,
     required this.basePosition,
     required this.tightMode,
@@ -87,7 +87,7 @@ class PhotoViewCore extends StatefulWidget {
   final PhotoViewControllerBase controller;
   final PhotoViewScaleStateController scaleStateController;
   final ScaleBoundaries scaleBoundaries;
-  final ScaleStateCycle? scaleStateCycle;
+  final ScaleStateCycle scaleStateCycle;
   final Alignment basePosition;
 
   final PhotoViewImageTapUpCallback? onTapUp;
@@ -440,11 +440,9 @@ class PhotoViewCoreState extends State<PhotoViewCore>
 
             return PhotoViewGestureDetector(
               child: child,
-              onDoubleTapDown:
-                  widget.scaleStateCycle != null ? recordPointerPosition : null,
-              onDoubleTap: widget.scaleStateCycle != null ? onDoubleTap : null,
-              onDoubleTapCancel:
-                  widget.scaleStateCycle != null ? clearPointerPosition : null,
+              onDoubleTapDown: recordPointerPosition,
+              onDoubleTap: onDoubleTap,
+              onDoubleTapCancel: clearPointerPosition,
               onScaleStart: onScaleStart,
               onScaleUpdate: onScaleUpdate,
               onScaleEnd: onScaleEnd,

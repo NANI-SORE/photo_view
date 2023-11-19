@@ -17,12 +17,12 @@ double getScaleForScaleState(
       );
     case PhotoViewScaleState.zoomedIn:
       return _clampSize(
-        scaleBoundaries.initialScale, // maxScale
+        scaleBoundaries.maxScale,
         scaleBoundaries,
       );
     case PhotoViewScaleState.zoomedOut:
       return _clampSize(
-        scaleBoundaries.initialScale, // minScale
+        scaleBoundaries.minScale,
         scaleBoundaries,
       );
     case PhotoViewScaleState.covering:
