@@ -22,6 +22,7 @@ void main() {
       scale: null,
       rotation: initialRotation,
       rotationFocusPoint: null,
+      scaleBoundaries: null,
     );
 
     expect(controller.value, testValue);
@@ -60,6 +61,7 @@ void main() {
       scale: null,
       rotation: 1.0,
       rotationFocusPoint: null,
+      scaleBoundaries: null,
     );
 
     const PhotoViewControllerValue value2 = const PhotoViewControllerValue(
@@ -67,6 +69,7 @@ void main() {
       scale: 3.0,
       rotation: 1.0,
       rotationFocusPoint: null,
+      scaleBoundaries: null,
     );
 
     const PhotoViewControllerValue value3 = const PhotoViewControllerValue(
@@ -74,6 +77,7 @@ void main() {
       scale: 3.0,
       rotation: 45.0,
       rotationFocusPoint: null,
+      scaleBoundaries: null,
     );
 
     const PhotoViewControllerValue value4 = const PhotoViewControllerValue(
@@ -81,6 +85,7 @@ void main() {
       scale: 5.0,
       rotation: 45.0,
       rotationFocusPoint: null,
+      scaleBoundaries: null,
     );
 
     expect(

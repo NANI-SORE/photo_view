@@ -180,6 +180,14 @@ mixin PhotoViewControllerDelegate on State<PhotoViewCore> {
     return CornersRange(minY, maxY);
   }
 
+  BoundaryRange boundary({double? scale}) {
+    final double _scale = scale ?? this.scale;
+    return BoundaryRange(
+      cornersX(scale: _scale),
+      cornersY(scale: _scale),
+    );
+  }
+
   Offset clampPosition({Offset? position, double? scale}) {
     final double _scale = scale ?? this.scale;
     final Offset _position = position ?? this.position;

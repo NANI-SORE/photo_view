@@ -11,16 +11,28 @@ double getScaleForScaleState(
 ) {
   switch (scaleState) {
     case PhotoViewScaleState.initial:
-      return _clampSize(scaleBoundaries.initialScale, scaleBoundaries);
+      return _clampSize(
+        scaleBoundaries.initialScale,
+        scaleBoundaries,
+      );
     case PhotoViewScaleState.zoomedIn:
-      return _clampSize(scaleBoundaries.maxScale, scaleBoundaries);
+      return _clampSize(
+        scaleBoundaries.initialScale, // maxScale
+        scaleBoundaries,
+      );
     case PhotoViewScaleState.zoomedOut:
-      return _clampSize(scaleBoundaries.minScale, scaleBoundaries);
+      return _clampSize(
+        scaleBoundaries.initialScale, // minScale
+        scaleBoundaries,
+      );
     case PhotoViewScaleState.covering:
       return _clampSize(
-          _scaleForCovering(
-              scaleBoundaries.outerSize, scaleBoundaries.childSize),
-          scaleBoundaries);
+        _scaleForCovering(
+          scaleBoundaries.outerSize,
+          scaleBoundaries.childSize,
+        ),
+        scaleBoundaries,
+      );
     case PhotoViewScaleState.originalSize:
       return _clampSize(1.0, scaleBoundaries);
     // Will never be reached
@@ -93,6 +105,10 @@ class ScaleBoundaries {
   }
 
   @override
+  String toString() =>
+      'ScaleBoundaries(minScale: $minScale, maxScale: $maxScale, initialScale: $initialScale, outerSize: $outerSize, childSize: $childSize)';
+
+  @override
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ScaleBoundaries &&
@@ -141,4 +157,22 @@ class CornersRange {
   const CornersRange(this.min, this.max);
   final double min;
   final double max;
+}
+
+class BoundaryRange {
+  const BoundaryRange(this.rangeX, this.rangeY);
+
+  final CornersRange rangeX;
+  final CornersRange rangeY;
+
+  double get minX => rangeX.min;
+  double get maxX => rangeX.max;
+  double get minY => rangeY.min;
+  double get maxY => rangeY.max;
+  double get width => (maxX - minX).abs();
+  double get height => (maxY - minY).abs();
+
+  @override
+  String toString() =>
+      'BoundaryRange(minX: $minX, maxX: $maxX, minY: $minY, maxY: $maxY, width: $width, height: $height)';
 }

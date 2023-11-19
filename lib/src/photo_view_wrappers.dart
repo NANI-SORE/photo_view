@@ -311,7 +311,7 @@ class CustomChildWrapper extends StatelessWidget {
       heroAttributes: heroAttributes,
       controller: controller,
       scaleStateController: scaleStateController,
-      scaleStateCycle: scaleStateCycle,
+      scaleStateCycle: scaleStateCycle ?? defaultScaleStateCycle,
       basePosition: basePosition ?? Alignment.center,
       scaleBoundaries: scaleBoundaries,
       strictScale: strictScale ?? false,

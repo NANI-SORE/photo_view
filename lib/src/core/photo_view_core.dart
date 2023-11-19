@@ -111,7 +111,11 @@ class PhotoViewCore extends StatefulWidget {
   bool get hasCustomChild => customChild != null;
 }
 
-class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMixin, PhotoViewControllerDelegate, HitCornersDetector {
+class PhotoViewCoreState extends State<PhotoViewCore>
+    with
+        TickerProviderStateMixin,
+        PhotoViewControllerDelegate,
+        HitCornersDetector {
   Offset? _normalizedPosition;
   double? _scaleBefore;
   double? _rotationBefore;
@@ -122,7 +126,8 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
   late final AnimationController _positionAnimationController;
   Animation<Offset>? _positionAnimation;
 
-  late final AnimationController _rotationAnimationController = AnimationController(vsync: this)..addListener(handleRotationAnimation);
+  late final AnimationController _rotationAnimationController =
+      AnimationController(vsync: this)..addListener(handleRotationAnimation);
   Animation<double>? _rotationAnimation;
 
   PhotoViewHeroAttributes? get heroAttributes => widget.heroAttributes;
@@ -156,8 +161,9 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
     final double newScale = _scaleBefore! * details.scale;
     final Offset delta = details.focalPoint - _normalizedPosition!;
 
-    if (widget.strictScale && (newScale > widget.scaleBoundaries.maxScale ||
-        newScale < widget.scaleBoundaries.minScale)) {
+    if (widget.strictScale &&
+        (newScale > widget.scaleBoundaries.maxScale ||
+            newScale < widget.scaleBoundaries.minScale)) {
       return;
     }
 
@@ -165,8 +171,11 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
 
     updateMultiple(
       scale: newScale,
-      position: widget.enablePanAlways ? delta : clampPosition(position: delta * details.scale),
-      rotation: widget.enableRotation ? _rotationBefore! + details.rotation : null,
+      position: widget.enablePanAlways
+          ? delta
+          : clampPosition(position: delta * details.scale),
+      rotation:
+          widget.enableRotation ? _rotationBefore! + details.rotation : null,
       rotationFocusPoint: widget.enableRotation ? details.focalPoint : null,
     );
   }
@@ -228,16 +237,24 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
 
   void onZoomUpdate(TapDragZoomUpdateDetails details) {
     final Offset delta = details.localPoint - _normalizedPosition!;
-    double newScale = _scaleBefore! + delta.dy / scaleBoundaries.outerSize.height * 5;
+    double newScale =
+        _scaleBefore! + delta.dy / scaleBoundaries.outerSize.height * 5;
 
-    if (newScale < scaleBoundaries.minScale) {
-      newScale = scaleBoundaries.minScale;
+    double allowedMinScale = scaleBoundaries.minScale * 0.8;
+    if (allowedMinScale <= 0.1) {
+      allowedMinScale = scaleBoundaries.minScale;
+    }
+    if (newScale < allowedMinScale) {
+      newScale = allowedMinScale;
     }
 
     updateScaleStateFromNewScale(newScale);
 
     if (controller.position == Offset.zero && _scaleBefore! == 1) {
-      animatePosition(Offset.zero, localPosition2Offset(details.localPoint, _scaleBefore!));
+      animatePosition(
+        Offset.zero,
+        localPosition2Offset(details.localPoint, _scaleBefore!),
+      );
     }
     updateMultiple(scale: newScale);
   }
@@ -292,14 +309,16 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
   }
 
   void animatePosition(Offset from, Offset to) {
-    _positionAnimation = Tween<Offset>(begin: from, end: to).animate(_positionAnimationController);
+    _positionAnimation = Tween<Offset>(begin: from, end: to)
+        .animate(_positionAnimationController);
     _positionAnimationController
       ..value = 0.0
       ..fling(velocity: 0.4);
   }
 
   void animateRotation(double from, double to) {
-    _rotationAnimation = Tween<double>(begin: from, end: to).animate(_rotationAnimationController);
+    _rotationAnimation = Tween<double>(begin: from, end: to)
+        .animate(_rotationAnimationController);
     _rotationAnimationController
       ..value = 0.0
       ..fling(velocity: 0.4);
@@ -313,7 +332,8 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
 
   /// Check if scale is equal to initial after scale animation update
   void onAnimationStatusCompleted() {
-    if (scaleStateController.scaleState != PhotoViewScaleState.initial && scale == scaleBoundaries.initialScale) {
+    if (scaleStateController.scaleState != PhotoViewScaleState.initial &&
+        scale == scaleBoundaries.initialScale) {
       scaleStateController.setInvisibly(PhotoViewScaleState.initial);
     }
   }
@@ -325,16 +345,25 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
     addAnimateOnScaleStateUpdate(animateOnScaleStateUpdate);
 
     cachedScaleBoundaries = widget.scaleBoundaries;
+    controller.scaleBoundaries = widget.scaleBoundaries;
 
     _scaleAnimationController = AnimationController(vsync: this)
       ..addListener(handleScaleAnimation)
       ..addStatusListener(onAnimationStatus);
-    _positionAnimationController = AnimationController(vsync: this)..addListener(handlePositionAnimate);
+    _positionAnimationController = AnimationController(vsync: this)
+      ..addListener(handlePositionAnimate);
   }
 
   void animateOnScaleStateUpdate(double prevScale, double nextScale) {
     animateScale(prevScale, nextScale);
-    animatePosition(controller.position, Offset.zero);
+    if (nextScale < prevScale || _doubleTapLocation == null) {
+      animatePosition(controller.position, Offset.zero);
+    } else {
+      animatePosition(
+        controller.position,
+        localPosition2Offset(_doubleTapLocation, nextScale),
+      );
+    }
     animateRotation(controller.rotation, 0.0);
   }
 
@@ -361,6 +390,7 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
     if (widget.scaleBoundaries != cachedScaleBoundaries) {
       markNeedsScaleRecalc = true;
       cachedScaleBoundaries = widget.scaleBoundaries;
+      controller.scaleBoundaries = widget.scaleBoundaries;
     }
 
     return StreamBuilder(
@@ -391,7 +421,9 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
             );
 
             final child = Container(
-              constraints: widget.tightMode ? BoxConstraints.tight(scaleBoundaries.childSize * scale) : null,
+              constraints: widget.tightMode
+                  ? BoxConstraints.tight(scaleBoundaries.childSize * scale)
+                  : null,
               child: Center(
                 child: Transform(
                   child: customChildLayout,
@@ -408,18 +440,26 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
 
             return PhotoViewGestureDetector(
               child: child,
-              onDoubleTapDown: widget.scaleStateCycle != null ? recordPointerPosition : null,
-              onDoubleTap: widget.scaleStateCycle != null ? nextScaleState : null,
-              onDoubleTapCancel: widget.scaleStateCycle != null ? clearPointerPosition : null,
+              onDoubleTapDown:
+                  widget.scaleStateCycle != null ? recordPointerPosition : null,
+              onDoubleTap: widget.scaleStateCycle != null ? onDoubleTap : null,
+              onDoubleTapCancel:
+                  widget.scaleStateCycle != null ? clearPointerPosition : null,
               onScaleStart: onScaleStart,
               onScaleUpdate: onScaleUpdate,
               onScaleEnd: onScaleEnd,
-              onZoomStart: widget.enableTapDragZoom == true ? onZoomStart : null,
-              onZoomUpdate: widget.enableTapDragZoom == true ? onZoomUpdate : null,
+              onZoomStart:
+                  widget.enableTapDragZoom == true ? onZoomStart : null,
+              onZoomUpdate:
+                  widget.enableTapDragZoom == true ? onZoomUpdate : null,
               onZoomEnd: widget.enableTapDragZoom == true ? onZoomEnd : null,
               hitDetector: this,
-              onTapUp: widget.onTapUp != null ? (details) => widget.onTapUp!(context, details, value) : null,
-              onTapDown: widget.onTapDown != null ? (details) => widget.onTapDown!(context, details, value) : null,
+              onTapUp: widget.onTapUp != null
+                  ? (details) => widget.onTapUp!(context, details, value)
+                  : null,
+              onTapDown: widget.onTapDown != null
+                  ? (details) => widget.onTapDown!(context, details, value)
+                  : null,
             );
           } else {
             return Container();
@@ -453,39 +493,6 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
           );
   }
 
-  @override
-  void nextScaleState() {
-    final PhotoViewScaleState scaleState = scaleStateController.scaleState;
-    if (scaleState == PhotoViewScaleState.zoomedIn || scaleState == PhotoViewScaleState.zoomedOut) {
-      scaleStateController.scaleState = scaleStateCycle!(scaleState);
-      return;
-    }
-    final double originalScale = getScaleForScaleState(
-      scaleState,
-      scaleBoundaries,
-    );
-
-    double prevScale = originalScale;
-    PhotoViewScaleState prevScaleState = scaleState;
-    double nextScale = originalScale;
-    PhotoViewScaleState nextScaleState = scaleState;
-
-    do {
-      prevScale = nextScale;
-      prevScaleState = nextScaleState;
-      nextScaleState = scaleStateCycle!(prevScaleState);
-      nextScale = getScaleForScaleState(nextScaleState, scaleBoundaries);
-    } while (prevScale == nextScale && scaleState != nextScaleState);
-
-    if (originalScale == nextScale) {
-      return;
-    }
-
-    scaleStateController.setInvisibly(nextScaleState);
-    animatePosition(Offset.zero, localPosition2Offset(_doubleTapLocation, prevScale));
-    animateScale(prevScale, nextScale);
-  }
-
   void recordPointerPosition(TapDownDetails details) {
     _doubleTapLocation = details.localPosition;
   }
@@ -498,7 +505,8 @@ class PhotoViewCoreState extends State<PhotoViewCore> with TickerProviderStateMi
     final double screenWidth = scaleBoundaries.outerSize.width;
     final double screenHeight = scaleBoundaries.outerSize.height;
 
-    final Offset _position = position ?? Offset(screenWidth / 2, screenWidth / 2);
+    final Offset _position =
+        position ?? Offset(screenWidth / 2, screenHeight / 2);
     return -_position * scale + Offset(screenWidth / 2, screenHeight / 2);
   }
 }
@@ -529,7 +537,9 @@ class _CenterWithOriginalSizeDelegate extends SingleChildLayoutDelegate {
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) {
-    return useImageScale ? const BoxConstraints() : BoxConstraints.tight(subjectSize);
+    return useImageScale
+        ? const BoxConstraints()
+        : BoxConstraints.tight(subjectSize);
   }
 
   @override
@@ -547,5 +557,6 @@ class _CenterWithOriginalSizeDelegate extends SingleChildLayoutDelegate {
           useImageScale == other.useImageScale;
 
   @override
-  int get hashCode => subjectSize.hashCode ^ basePosition.hashCode ^ useImageScale.hashCode;
+  int get hashCode =>
+      subjectSize.hashCode ^ basePosition.hashCode ^ useImageScale.hashCode;
 }

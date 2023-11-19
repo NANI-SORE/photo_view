@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:photo_view/src/utils/ignorable_change_notifier.dart';
+import 'package:photo_view/src/utils/photo_view_utils.dart';
 
 /// The interface in which controllers will be implemented.
 ///
@@ -64,12 +65,15 @@ abstract class PhotoViewControllerBase<T extends PhotoViewControllerValue> {
   /// The center of the rotation transformation. It is a coordinate referring to the absolute dimensions of the image.
   Offset? rotationFocusPoint;
 
+  ScaleBoundaries? scaleBoundaries;
+
   /// Update multiple fields of the state with only one update streamed.
   void updateMultiple({
     Offset? position,
     double? scale,
     double? rotation,
     Offset? rotationFocusPoint,
+    ScaleBoundaries? scaleBoundaries,
   });
 }
 
@@ -81,12 +85,14 @@ class PhotoViewControllerValue {
     required this.scale,
     required this.rotation,
     required this.rotationFocusPoint,
+    required this.scaleBoundaries,
   });
 
   final Offset position;
   final double? scale;
   final double rotation;
   final Offset? rotationFocusPoint;
+  final ScaleBoundaries? scaleBoundaries;
 
   @override
   bool operator ==(Object other) =>
@@ -96,18 +102,20 @@ class PhotoViewControllerValue {
           position == other.position &&
           scale == other.scale &&
           rotation == other.rotation &&
-          rotationFocusPoint == other.rotationFocusPoint;
+          rotationFocusPoint == other.rotationFocusPoint &&
+          scaleBoundaries == other.scaleBoundaries;
 
   @override
   int get hashCode =>
       position.hashCode ^
       scale.hashCode ^
       rotation.hashCode ^
-      rotationFocusPoint.hashCode;
+      rotationFocusPoint.hashCode ^
+      scaleBoundaries.hashCode;
 
   @override
   String toString() {
-    return 'PhotoViewControllerValue{position: $position, scale: $scale, rotation: $rotation, rotationFocusPoint: $rotationFocusPoint}';
+    return 'PhotoViewControllerValue{position: $position, scale: $scale, rotation: $rotation, rotationFocusPoint: $rotationFocusPoint, scaleBoundaries: $scaleBoundaries}';
   }
 }
 
@@ -124,12 +132,14 @@ class PhotoViewController
     Offset initialPosition = Offset.zero,
     double initialRotation = 0.0,
     double? initialScale,
+    ScaleBoundaries? scaleBoundaries,
   })  : _valueNotifier = IgnorableValueNotifier(
           PhotoViewControllerValue(
             position: initialPosition,
             rotation: initialRotation,
             scale: initialScale,
             rotationFocusPoint: null,
+            scaleBoundaries: scaleBoundaries,
           ),
         ),
         super() {
@@ -189,6 +199,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries,
     );
   }
 
@@ -206,6 +217,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries,
     );
   }
 
@@ -224,6 +236,7 @@ class PhotoViewController
         scale: scale,
         rotation: rotation,
         rotationFocusPoint: rotationFocusPoint,
+        scaleBoundaries: scaleBoundaries,
       ),
     );
   }
@@ -239,6 +252,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries,
     );
   }
 
@@ -256,6 +270,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries,
     );
   }
 
@@ -263,11 +278,30 @@ class PhotoViewController
   Offset? get rotationFocusPoint => value.rotationFocusPoint;
 
   @override
+  set scaleBoundaries(ScaleBoundaries? scaleBoundaries) {
+    if (value.scaleBoundaries == scaleBoundaries) {
+      return;
+    }
+    prevValue = value;
+    value = PhotoViewControllerValue(
+      position: position,
+      scale: scale,
+      rotation: rotation,
+      rotationFocusPoint: rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries,
+    );
+  }
+
+  @override
+  ScaleBoundaries? get scaleBoundaries => value.scaleBoundaries;
+
+  @override
   void updateMultiple({
     Offset? position,
     double? scale,
     double? rotation,
     Offset? rotationFocusPoint,
+    ScaleBoundaries? scaleBoundaries,
   }) {
     prevValue = value;
     value = PhotoViewControllerValue(
@@ -275,6 +309,7 @@ class PhotoViewController
       scale: scale ?? value.scale,
       rotation: rotation ?? value.rotation,
       rotationFocusPoint: rotationFocusPoint ?? value.rotationFocusPoint,
+      scaleBoundaries: scaleBoundaries ?? value.scaleBoundaries,
     );
   }
 
