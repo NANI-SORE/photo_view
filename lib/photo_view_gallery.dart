@@ -272,6 +272,7 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             onTapUp: pageOption.onTapUp,
             onTapDown: pageOption.onTapDown,
             onScaleEnd: pageOption.onScaleEnd,
+            enableDoubleTapZoom: pageOption.enableDoubleTapZoom,
             onDoubleTapZoomEnd: pageOption.onDoubleTapZoomEnd,
             enableTapDragZoom: pageOption.enableTapDragZoom,
             gestureDetectorBehavior: pageOption.gestureDetectorBehavior,
@@ -301,6 +302,7 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             onTapUp: pageOption.onTapUp,
             onTapDown: pageOption.onTapDown,
             onScaleEnd: pageOption.onScaleEnd,
+            enableDoubleTapZoom: pageOption.enableDoubleTapZoom,
             onDoubleTapZoomEnd: pageOption.onDoubleTapZoomEnd,
             enableTapDragZoom: pageOption.enableTapDragZoom,
             gestureDetectorBehavior: pageOption.gestureDetectorBehavior,
@@ -345,6 +347,7 @@ class PhotoViewGalleryPageOptions {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     this.gestureDetectorBehavior,
@@ -371,6 +374,7 @@ class PhotoViewGalleryPageOptions {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     this.gestureDetectorBehavior,
@@ -424,6 +428,8 @@ class PhotoViewGalleryPageOptions {
 
   /// Mirror to [PhotoView.onScaleEnd]
   final PhotoViewImageScaleEndCallback? onScaleEnd;
+
+  final bool? enableDoubleTapZoom;
 
   final bool? enableTapDragZoom;
 

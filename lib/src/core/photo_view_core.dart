@@ -33,6 +33,7 @@ class PhotoViewCore extends StatefulWidget {
     required this.onTapUp,
     required this.onTapDown,
     required this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     required this.gestureDetectorBehavior,
@@ -58,6 +59,7 @@ class PhotoViewCore extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     this.gestureDetectorBehavior,
@@ -93,6 +95,7 @@ class PhotoViewCore extends StatefulWidget {
   final PhotoViewImageTapUpCallback? onTapUp;
   final PhotoViewImageTapDownCallback? onTapDown;
   final PhotoViewImageScaleEndCallback? onScaleEnd;
+  final bool? enableDoubleTapZoom;
   final bool? enableTapDragZoom;
   final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
   final HitTestBehavior? gestureDetectorBehavior;
@@ -295,7 +298,10 @@ class PhotoViewCoreState extends State<PhotoViewCore>
   }
 
   void onDoubleTap() {
-    nextScaleState();
+    // default to always enabled even when null
+    if (widget.enableDoubleTapZoom != false) {
+      nextScaleState();
+    }
   }
 
   void animateScale(double from, double to) {

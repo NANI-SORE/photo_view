@@ -255,6 +255,7 @@ class PhotoView extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     this.customSize,
@@ -294,6 +295,7 @@ class PhotoView extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     this.customSize,
@@ -397,6 +399,8 @@ class PhotoView extends StatefulWidget {
   /// A pointer that will trigger a scale has stopped contacting the screen at a
   /// particular location.
   final PhotoViewImageScaleEndCallback? onScaleEnd;
+
+  final bool? enableDoubleTapZoom;
 
   final bool? enableTapDragZoom;
 
@@ -537,6 +541,7 @@ class _PhotoViewState extends State<PhotoView>
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
                 onScaleEnd: widget.onScaleEnd,
+                enableDoubleTapZoom: widget.enableDoubleTapZoom,
                 onDoubleTapZoomEnd: widget.onDoubleTapZoomEnd,
                 enableTapDragZoom: widget.enableTapDragZoom,
                 outerSize: computedOuterSize,
@@ -566,6 +571,7 @@ class _PhotoViewState extends State<PhotoView>
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
                 onScaleEnd: widget.onScaleEnd,
+                enableDoubleTapZoom: widget.enableDoubleTapZoom,
                 onDoubleTapZoomEnd: widget.onDoubleTapZoomEnd,
                 enableTapDragZoom: widget.enableTapDragZoom,
                 outerSize: computedOuterSize,

@@ -26,6 +26,7 @@ class ImageWrapper extends StatefulWidget {
     required this.onTapUp,
     required this.onTapDown,
     required this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     required this.outerSize,
@@ -57,6 +58,7 @@ class ImageWrapper extends StatefulWidget {
   final PhotoViewImageTapUpCallback? onTapUp;
   final PhotoViewImageTapDownCallback? onTapDown;
   final PhotoViewImageScaleEndCallback? onScaleEnd;
+  final bool? enableDoubleTapZoom;
   final bool? enableTapDragZoom;
   final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
   final Size outerSize;
@@ -203,6 +205,7 @@ class _ImageWrapperState extends State<ImageWrapper> {
       onTapUp: widget.onTapUp,
       onTapDown: widget.onTapDown,
       onScaleEnd: widget.onScaleEnd,
+      enableDoubleTapZoom: widget.enableDoubleTapZoom,
       onDoubleTapZoomEnd: widget.onDoubleTapZoomEnd,
       enableTapDragZoom: widget.enableTapDragZoom,
       gestureDetectorBehavior: widget.gestureDetectorBehavior,
@@ -254,6 +257,7 @@ class CustomChildWrapper extends StatelessWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
+    this.enableDoubleTapZoom,
     this.onDoubleTapZoomEnd,
     this.enableTapDragZoom,
     required this.outerSize,
@@ -284,6 +288,7 @@ class CustomChildWrapper extends StatelessWidget {
   final PhotoViewImageTapUpCallback? onTapUp;
   final PhotoViewImageTapDownCallback? onTapDown;
   final PhotoViewImageScaleEndCallback? onScaleEnd;
+  final bool? enableDoubleTapZoom;
   final bool? enableTapDragZoom;
   final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
   final Size outerSize;
@@ -318,6 +323,7 @@ class CustomChildWrapper extends StatelessWidget {
       onTapUp: onTapUp,
       onTapDown: onTapDown,
       onScaleEnd: onScaleEnd,
+      enableDoubleTapZoom: enableDoubleTapZoom,
       onDoubleTapZoomEnd: onDoubleTapZoomEnd,
       enableTapDragZoom: enableTapDragZoom,
       gestureDetectorBehavior: gestureDetectorBehavior,
