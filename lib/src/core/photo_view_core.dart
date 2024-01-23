@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/widgets.dart';
 import 'package:photo_view/photo_view.dart'
     show
@@ -243,6 +245,12 @@ class PhotoViewCoreState extends State<PhotoViewCore>
     double newScale =
         _scaleBefore! + delta.dy / scaleBoundaries.outerSize.height * 5;
 
+    if (widget.strictScale &&
+        (newScale > widget.scaleBoundaries.maxScale ||
+            newScale < widget.scaleBoundaries.minScale)) {
+      return;
+    }
+
     double allowedMinScale = scaleBoundaries.minScale * 0.8;
     if (allowedMinScale <= 0.1) {
       allowedMinScale = scaleBoundaries.minScale;
@@ -259,7 +267,10 @@ class PhotoViewCoreState extends State<PhotoViewCore>
         localPosition2Offset(details.localPoint, _scaleBefore!),
       );
     }
-    updateMultiple(scale: newScale);
+    updateMultiple(
+      scale: newScale,
+      position: localPosition2Offset(_normalizedPosition, newScale),
+    );
   }
 
   void onZoomEnd() {
@@ -371,6 +382,8 @@ class PhotoViewCoreState extends State<PhotoViewCore>
       );
     }
     animateRotation(controller.rotation, 0.0);
+
+    clearPointerPosition();
   }
 
   @override
@@ -502,16 +515,86 @@ class PhotoViewCoreState extends State<PhotoViewCore>
   }
 
   void clearPointerPosition() {
+    // TODO add a timeout after which tap location is discarded
     _doubleTapLocation = null;
   }
 
-  Offset localPosition2Offset(Offset? position, double scale) {
+  Offset localPosition2Offset(Offset? position, double newScale) {
     final double screenWidth = scaleBoundaries.outerSize.width;
     final double screenHeight = scaleBoundaries.outerSize.height;
 
+    final double computedWidth = scaleBoundaries.childSize.width * newScale;
+    final double computedHeight = scaleBoundaries.childSize.height * newScale;
+
     final Offset _position =
         position ?? Offset(screenWidth / 2, screenHeight / 2);
-    return -_position * scale + Offset(screenWidth / 2, screenHeight / 2);
+
+    final double alignmentMinX = ((basePosition.x - 1).abs() / 2) * -1;
+    final double alignmentMaxX = (basePosition.x + 1).abs() / 2;
+    final double alignmentMinY = ((basePosition.y - 1).abs() / 2) * -1;
+    final double alignmentMaxY = (basePosition.y + 1).abs() / 2;
+
+    final double posToScreenWidth = _position.dx / screenWidth;
+    final double posToScreenHeight = _position.dy / screenHeight;
+    double posToScreenAlignedRatioX = lerpDouble(
+      alignmentMinX,
+      alignmentMaxX,
+      posToScreenWidth,
+    )!;
+    double posToScreenAlignedRatioY = lerpDouble(
+      alignmentMinY,
+      alignmentMaxY,
+      posToScreenHeight,
+    )!;
+
+    if (scale < scaleBoundaries.coveringScale) {
+      // clamp values in cases when image with initScale is smaller than screen and position could be outside of screen
+      final double initScale = scaleBoundaries.initialScale;
+      final double computedInitWidth =
+          scaleBoundaries.childSize.width * initScale;
+      final double computedInitHeight =
+          scaleBoundaries.childSize.height * initScale;
+
+      final double initImageToScreenRatioX = computedInitWidth / screenWidth;
+      final double initImageToScreenRatioY = computedInitHeight / screenHeight;
+
+      final double scaleDiff = (scale - scaleBoundaries.initialScale) /
+          (scaleBoundaries.coveringScale - scaleBoundaries.initialScale);
+
+      posToScreenAlignedRatioX /= initImageToScreenRatioX;
+      posToScreenAlignedRatioY /= initImageToScreenRatioY;
+    } else {
+      // TODO calculate differently when image is already zoomed in
+
+      // final cornersX = this.cornersX(scale: newScale);
+      // final cornersY = this.cornersY(scale: newScale);
+
+      // final scaleDiff = newScale / scale;
+
+      // final fromLeft =
+      //     cornersX.max.abs() + (controller.position.dx * scaleDiff * -1);
+      // final double posToTotalRatioX = (fromLeft + _position.dx) / computedWidth;
+
+      // final fromTop =
+      //     cornersY.max.abs() + (controller.position.dy * scaleDiff * -1);
+      // final double posToTotalRatioY = (fromTop + _position.dy) / computedHeight;
+
+      // posToScreenAlignedRatioX = lerpDouble(
+      //   alignmentMinX,
+      //   alignmentMaxX,
+      //   posToTotalRatioX,
+      // )!;
+      // posToScreenAlignedRatioY = lerpDouble(
+      //   alignmentMinY,
+      //   alignmentMaxY,
+      //   posToTotalRatioY,
+      // )!;
+    }
+
+    final double _x = posToScreenAlignedRatioX * computedWidth;
+    final double _y = posToScreenAlignedRatioY * computedHeight;
+
+    return Offset(-_x, -_y);
   }
 }
 

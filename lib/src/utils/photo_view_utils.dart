@@ -65,11 +65,15 @@ class ScaleBoundaries {
           (_minScale as PhotoViewComputedScale).multiplier; // ignore: avoid_as
     }
     if (_minScale == PhotoViewComputedScale.covered) {
-      return _scaleForCovering(outerSize, childSize) *
+      return coveringScale *
           (_minScale as PhotoViewComputedScale).multiplier; // ignore: avoid_as
     }
     assert(_minScale >= 0.0);
     return _minScale;
+  }
+
+  double get coveringScale {
+    return _scaleForCovering(outerSize, childSize);
   }
 
   double get maxScale {
@@ -81,7 +85,7 @@ class ScaleBoundaries {
           .clamp(minScale, double.infinity);
     }
     if (_maxScale == PhotoViewComputedScale.covered) {
-      return (_scaleForCovering(outerSize, childSize) *
+      return (coveringScale *
               (_maxScale as PhotoViewComputedScale) // ignore: avoid_as
                   .multiplier)
           .clamp(minScale, double.infinity);
@@ -97,7 +101,7 @@ class ScaleBoundaries {
               .multiplier;
     }
     if (_initialScale == PhotoViewComputedScale.covered) {
-      return _scaleForCovering(outerSize, childSize) *
+      return coveringScale *
           (_initialScale as PhotoViewComputedScale) // ignore: avoid_as
               .multiplier;
     }
@@ -157,22 +161,10 @@ class CornersRange {
   const CornersRange(this.min, this.max);
   final double min;
   final double max;
-}
 
-class BoundaryRange {
-  const BoundaryRange(this.rangeX, this.rangeY);
-
-  final CornersRange rangeX;
-  final CornersRange rangeY;
-
-  double get minX => rangeX.min;
-  double get maxX => rangeX.max;
-  double get minY => rangeY.min;
-  double get maxY => rangeY.max;
-  double get width => (maxX - minX).abs();
-  double get height => (maxY - minY).abs();
+  double get diff => (max - min).abs();
 
   @override
   String toString() =>
-      'BoundaryRange(minX: $minX, maxX: $maxX, minY: $minY, maxY: $maxY, width: $width, height: $height)';
+      'CornersRange(min: ${min.toStringAsFixed(1)}, max: ${max.toStringAsFixed(1)}, diff: ${diff.toStringAsFixed(1)})';
 }
