@@ -49,6 +49,9 @@ class PhotoViewGestureDetector extends StatelessWidget {
   Widget build(BuildContext context) {
     final scope = PhotoViewGestureDetectorScope.of(context);
 
+    final DeviceGestureSettings? gestureSettings =
+        MediaQuery.maybeGestureSettingsOf(context);
+
     final Axis? axis = scope?.axis;
 
     final Map<Type, GestureRecognizerFactory> gestures =
@@ -68,24 +71,44 @@ class PhotoViewGestureDetector extends StatelessWidget {
 
     if (onDoubleTapDown != null ||
         onDoubleTap != null ||
-        onDoubleTapCancel != null ||
-        onZoomStart != null ||
-        onZoomUpdate != null ||
-        onZoomEnd != null) {
-      gestures[DoubleTapAndTapDragZoomGestureRecognizer] =
-          GestureRecognizerFactoryWithHandlers<
-              DoubleTapAndTapDragZoomGestureRecognizer>(
-        () => DoubleTapAndTapDragZoomGestureRecognizer(debugOwner: this),
-        (DoubleTapAndTapDragZoomGestureRecognizer instance) {
-          instance
-            ..onDoubleTapDown = onDoubleTapDown
-            ..onDoubleTap = onDoubleTap
-            ..onDoubleTapCancel = onDoubleTapCancel
-            ..onZoomStart = onZoomStart
-            ..onZoomUpdate = onZoomUpdate
-            ..onZoomEnd = onZoomEnd;
-        },
-      );
+        onDoubleTapCancel != null) {
+      if (onZoomStart != null && onZoomUpdate != null && onZoomEnd != null) {
+        gestures[DoubleTapAndTapDragZoomGestureRecognizer] =
+            GestureRecognizerFactoryWithHandlers<
+                DoubleTapAndTapDragZoomGestureRecognizer>(
+          () => DoubleTapAndTapDragZoomGestureRecognizer(
+            debugOwner: this,
+            supportedDevices: null,
+          ),
+          (DoubleTapAndTapDragZoomGestureRecognizer instance) {
+            instance
+              ..onDoubleTapDown = onDoubleTapDown
+              ..onDoubleTap = onDoubleTap
+              ..onDoubleTapCancel = onDoubleTapCancel
+              ..onZoomStart = onZoomStart
+              ..onZoomUpdate = onZoomUpdate
+              ..onZoomEnd = onZoomEnd
+              ..gestureSettings = gestureSettings
+              ..supportedDevices = null;
+          },
+        );
+      } else {
+        gestures[DoubleTapGestureRecognizer] =
+            GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
+          () => DoubleTapGestureRecognizer(
+            debugOwner: this,
+            supportedDevices: null,
+          ),
+          (DoubleTapGestureRecognizer instance) {
+            instance
+              ..onDoubleTapDown = onDoubleTapDown
+              ..onDoubleTap = onDoubleTap
+              ..onDoubleTapCancel = onDoubleTapCancel
+              ..gestureSettings = gestureSettings
+              ..supportedDevices = null;
+          },
+        );
+      }
     }
 
     gestures[PhotoViewGestureRecognizer] =
