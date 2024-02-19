@@ -309,10 +309,8 @@ class PhotoViewCoreState extends State<PhotoViewCore>
   }
 
   void onDoubleTap() {
-    // default to always enabled even when null
-    if (widget.enableDoubleTapZoom != false) {
-      nextScaleState();
-    }
+    nextScaleState();
+    clearPointerPosition();
   }
 
   void animateScale(double from, double to) {
@@ -373,7 +371,9 @@ class PhotoViewCoreState extends State<PhotoViewCore>
 
   void animateOnScaleStateUpdate(double prevScale, double nextScale) {
     animateScale(prevScale, nextScale);
-    if (nextScale < prevScale || _doubleTapLocation == null) {
+    if (nextScale < prevScale ||
+        _doubleTapLocation == null ||
+        widget.enableDoubleTapZoom == false) {
       animatePosition(controller.position, Offset.zero);
     } else {
       animatePosition(
@@ -459,9 +459,16 @@ class PhotoViewCoreState extends State<PhotoViewCore>
 
             return PhotoViewGestureDetector(
               child: child,
-              onDoubleTapDown: recordPointerPosition,
-              onDoubleTap: onDoubleTap,
-              onDoubleTapCancel: clearPointerPosition,
+              onDoubleTapDown: (widget.enableDoubleTapZoom != false ||
+                      widget.enableTapDragZoom == true)
+                  ? recordPointerPosition
+                  : null,
+              onDoubleTap:
+                  widget.enableDoubleTapZoom != false ? onDoubleTap : null,
+              onDoubleTapCancel: (widget.enableDoubleTapZoom != false ||
+                      widget.enableTapDragZoom == true)
+                  ? clearPointerPosition
+                  : null,
               onScaleStart: onScaleStart,
               onScaleUpdate: onScaleUpdate,
               onScaleEnd: onScaleEnd,
@@ -515,7 +522,6 @@ class PhotoViewCoreState extends State<PhotoViewCore>
   }
 
   void clearPointerPosition() {
-    // TODO add a timeout after which tap location is discarded
     _doubleTapLocation = null;
   }
 
@@ -523,78 +529,62 @@ class PhotoViewCoreState extends State<PhotoViewCore>
     final double screenWidth = scaleBoundaries.outerSize.width;
     final double screenHeight = scaleBoundaries.outerSize.height;
 
-    final double computedWidth = scaleBoundaries.childSize.width * newScale;
-    final double computedHeight = scaleBoundaries.childSize.height * newScale;
+    final double childWidth = scaleBoundaries.childSize.width;
+    final double childHeight = scaleBoundaries.childSize.height;
+
+    final double initScale = scaleBoundaries.initialScale;
+    final double computedInitWidth = childWidth * initScale;
+    final double computedInitHeight = childHeight * initScale;
+
+    final double computedNewWidth = childWidth * newScale;
+    final double computedNewHeight = childHeight * newScale;
 
     final Offset _position =
         position ?? Offset(screenWidth / 2, screenHeight / 2);
 
-    final double alignmentMinX = ((basePosition.x - 1).abs() / 2) * -1;
-    final double alignmentMaxX = (basePosition.x + 1).abs() / 2;
-    final double alignmentMinY = ((basePosition.y - 1).abs() / 2) * -1;
-    final double alignmentMaxY = (basePosition.y + 1).abs() / 2;
-
     final double posToScreenWidth = _position.dx / screenWidth;
     final double posToScreenHeight = _position.dy / screenHeight;
-    double posToScreenAlignedRatioX = lerpDouble(
-      alignmentMinX,
-      alignmentMaxX,
-      posToScreenWidth,
-    )!;
-    double posToScreenAlignedRatioY = lerpDouble(
-      alignmentMinY,
-      alignmentMaxY,
-      posToScreenHeight,
-    )!;
+    double posToScreenAlignedRatioX = alignRatioX(posToScreenWidth);
+    double posToScreenAlignedRatioY = alignRatioY(posToScreenHeight);
 
     if (scale < scaleBoundaries.coveringScale) {
       // clamp values in cases when image with initScale is smaller than screen and position could be outside of screen
-      final double initScale = scaleBoundaries.initialScale;
-      final double computedInitWidth =
-          scaleBoundaries.childSize.width * initScale;
-      final double computedInitHeight =
-          scaleBoundaries.childSize.height * initScale;
-
       final double initImageToScreenRatioX = computedInitWidth / screenWidth;
       final double initImageToScreenRatioY = computedInitHeight / screenHeight;
 
-      final double scaleDiff = (scale - scaleBoundaries.initialScale) /
-          (scaleBoundaries.coveringScale - scaleBoundaries.initialScale);
-
       posToScreenAlignedRatioX /= initImageToScreenRatioX;
       posToScreenAlignedRatioY /= initImageToScreenRatioY;
-    } else {
-      // TODO calculate differently when image is already zoomed in
-
-      // final cornersX = this.cornersX(scale: newScale);
-      // final cornersY = this.cornersY(scale: newScale);
-
-      // final scaleDiff = newScale / scale;
-
-      // final fromLeft =
-      //     cornersX.max.abs() + (controller.position.dx * scaleDiff * -1);
-      // final double posToTotalRatioX = (fromLeft + _position.dx) / computedWidth;
-
-      // final fromTop =
-      //     cornersY.max.abs() + (controller.position.dy * scaleDiff * -1);
-      // final double posToTotalRatioY = (fromTop + _position.dy) / computedHeight;
-
-      // posToScreenAlignedRatioX = lerpDouble(
-      //   alignmentMinX,
-      //   alignmentMaxX,
-      //   posToTotalRatioX,
-      // )!;
-      // posToScreenAlignedRatioY = lerpDouble(
-      //   alignmentMinY,
-      //   alignmentMaxY,
-      //   posToTotalRatioY,
-      // )!;
     }
 
-    final double _x = posToScreenAlignedRatioX * computedWidth;
-    final double _y = posToScreenAlignedRatioY * computedHeight;
+    final double _x = posToScreenAlignedRatioX * computedNewWidth;
+    final double _y = posToScreenAlignedRatioY * computedNewHeight;
 
-    return Offset(-_x, -_y);
+    return Offset(
+      -1 * _x,
+      -1 * _y,
+    );
+  }
+
+  double alignRatioX(double t) {
+    final double alignmentMinX = ((basePosition.x - 1).abs() / 2) * -1;
+    final double alignmentMaxX = (basePosition.x + 1).abs() / 2;
+
+    return lerpDouble(
+      alignmentMinX,
+      alignmentMaxX,
+      t,
+    )!;
+  }
+
+  double alignRatioY(double t) {
+    final double alignmentMinY = ((basePosition.y - 1).abs() / 2) * -1;
+    final double alignmentMaxY = (basePosition.y + 1).abs() / 2;
+
+    return lerpDouble(
+      alignmentMinY,
+      alignmentMaxY,
+      t,
+    )!;
   }
 }
 
