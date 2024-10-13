@@ -65,6 +65,8 @@ abstract class PhotoViewControllerBase<T extends PhotoViewControllerValue> {
   /// The center of the rotation transformation. It is a coordinate referring to the absolute dimensions of the image.
   Offset? rotationFocusPoint;
 
+  Offset? childFocalPoint;
+
   ScaleBoundaries? scaleBoundaries;
 
   /// Update multiple fields of the state with only one update streamed.
@@ -73,6 +75,7 @@ abstract class PhotoViewControllerBase<T extends PhotoViewControllerValue> {
     double? scale,
     double? rotation,
     Offset? rotationFocusPoint,
+    Offset? childFocalPoint,
     ScaleBoundaries? scaleBoundaries,
   });
 }
@@ -85,6 +88,7 @@ class PhotoViewControllerValue {
     required this.scale,
     required this.rotation,
     required this.rotationFocusPoint,
+    required this.childFocalPoint,
     required this.scaleBoundaries,
   });
 
@@ -92,6 +96,7 @@ class PhotoViewControllerValue {
   final double? scale;
   final double rotation;
   final Offset? rotationFocusPoint;
+  final Offset? childFocalPoint;
   final ScaleBoundaries? scaleBoundaries;
 
   @override
@@ -103,6 +108,7 @@ class PhotoViewControllerValue {
           scale == other.scale &&
           rotation == other.rotation &&
           rotationFocusPoint == other.rotationFocusPoint &&
+          childFocalPoint == other.childFocalPoint &&
           scaleBoundaries == other.scaleBoundaries;
 
   @override
@@ -111,11 +117,12 @@ class PhotoViewControllerValue {
       scale.hashCode ^
       rotation.hashCode ^
       rotationFocusPoint.hashCode ^
+      childFocalPoint.hashCode ^
       scaleBoundaries.hashCode;
 
   @override
   String toString() {
-    return 'PhotoViewControllerValue{position: $position, scale: $scale, rotation: $rotation, rotationFocusPoint: $rotationFocusPoint, scaleBoundaries: $scaleBoundaries}';
+    return 'PhotoViewControllerValue{position: $position, scale: $scale, rotation: $rotation, rotationFocusPoint: $rotationFocusPoint, childFocalPoint: $childFocalPoint, scaleBoundaries: $scaleBoundaries}';
   }
 }
 
@@ -139,6 +146,7 @@ class PhotoViewController
             rotation: initialRotation,
             scale: initialScale,
             rotationFocusPoint: null,
+            childFocalPoint: null,
             scaleBoundaries: scaleBoundaries,
           ),
         ),
@@ -199,6 +207,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
       scaleBoundaries: scaleBoundaries,
     );
   }
@@ -217,6 +226,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
       scaleBoundaries: scaleBoundaries,
     );
   }
@@ -236,6 +246,7 @@ class PhotoViewController
         scale: scale,
         rotation: rotation,
         rotationFocusPoint: rotationFocusPoint,
+        childFocalPoint: childFocalPoint,
         scaleBoundaries: scaleBoundaries,
       ),
     );
@@ -252,6 +263,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
       scaleBoundaries: scaleBoundaries,
     );
   }
@@ -270,12 +282,32 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
       scaleBoundaries: scaleBoundaries,
     );
   }
 
   @override
   Offset? get rotationFocusPoint => value.rotationFocusPoint;
+
+  @override
+  set childFocalPoint(Offset? childFocalPoint) {
+    if (value.childFocalPoint == childFocalPoint) {
+      return;
+    }
+    prevValue = value;
+    value = PhotoViewControllerValue(
+      position: position,
+      scale: scale,
+      rotation: rotation,
+      rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
+      scaleBoundaries: scaleBoundaries,
+    );
+  }
+
+  @override
+  Offset? get childFocalPoint => value.childFocalPoint;
 
   @override
   set scaleBoundaries(ScaleBoundaries? scaleBoundaries) {
@@ -288,6 +320,7 @@ class PhotoViewController
       scale: scale,
       rotation: rotation,
       rotationFocusPoint: rotationFocusPoint,
+      childFocalPoint: childFocalPoint,
       scaleBoundaries: scaleBoundaries,
     );
   }
@@ -301,6 +334,7 @@ class PhotoViewController
     double? scale,
     double? rotation,
     Offset? rotationFocusPoint,
+    Offset? childFocalPoint,
     ScaleBoundaries? scaleBoundaries,
   }) {
     prevValue = value;
@@ -309,6 +343,7 @@ class PhotoViewController
       scale: scale ?? value.scale,
       rotation: rotation ?? value.rotation,
       rotationFocusPoint: rotationFocusPoint ?? value.rotationFocusPoint,
+      childFocalPoint: childFocalPoint ?? value.childFocalPoint,
       scaleBoundaries: scaleBoundaries ?? value.scaleBoundaries,
     );
   }

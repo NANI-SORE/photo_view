@@ -22,6 +22,7 @@ void main() {
       scale: null,
       rotation: initialRotation,
       rotationFocusPoint: null,
+      childFocalPoint: null,
       scaleBoundaries: null,
     );
 
@@ -61,6 +62,7 @@ void main() {
       scale: null,
       rotation: 1.0,
       rotationFocusPoint: null,
+      childFocalPoint: null,
       scaleBoundaries: null,
     );
 
@@ -69,6 +71,7 @@ void main() {
       scale: 3.0,
       rotation: 1.0,
       rotationFocusPoint: null,
+      childFocalPoint: null,
       scaleBoundaries: null,
     );
 
@@ -77,6 +80,7 @@ void main() {
       scale: 3.0,
       rotation: 45.0,
       rotationFocusPoint: null,
+      childFocalPoint: null,
       scaleBoundaries: null,
     );
 
@@ -85,6 +89,7 @@ void main() {
       scale: 5.0,
       rotation: 45.0,
       rotationFocusPoint: null,
+      childFocalPoint: null,
       scaleBoundaries: null,
     );
 

@@ -1,9 +1,9 @@
-import 'dart:ui';
+import 'dart:math';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/widgets.dart';
 import 'package:photo_view/photo_view.dart'
     show
-        PhotoViewDoubleTapZoomEndCallback,
         PhotoViewHeroAttributes,
         PhotoViewImageScaleEndCallback,
         PhotoViewImageTapDownCallback,
@@ -21,11 +21,9 @@ const _defaultDecoration = const BoxDecoration(
   color: const Color.fromRGBO(0, 0, 0, 1.0),
 );
 
-/// Internal widget in which controls all animations lifecycle, core responses
-/// to user gestures, updates to  the controller state and mounts the entire PhotoView Layout
 class PhotoViewCore extends StatefulWidget {
   const PhotoViewCore({
-    Key? key,
+    super.key,
     required this.imageProvider,
     required this.backgroundDecoration,
     required this.semanticLabel,
@@ -35,9 +33,6 @@ class PhotoViewCore extends StatefulWidget {
     required this.onTapUp,
     required this.onTapDown,
     required this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     required this.gestureDetectorBehavior,
     required this.controller,
     required this.scaleBoundaries,
@@ -49,11 +44,10 @@ class PhotoViewCore extends StatefulWidget {
     required this.disableGestures,
     required this.enablePanAlways,
     required this.strictScale,
-  })  : customChild = null,
-        super(key: key);
+  }) : customChild = null;
 
   const PhotoViewCore.customChild({
-    Key? key,
+    super.key,
     required this.customChild,
     required this.backgroundDecoration,
     this.heroAttributes,
@@ -61,9 +55,6 @@ class PhotoViewCore extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     this.gestureDetectorBehavior,
     required this.controller,
     required this.scaleBoundaries,
@@ -77,8 +68,9 @@ class PhotoViewCore extends StatefulWidget {
     required this.strictScale,
   })  : imageProvider = null,
         semanticLabel = null,
-        gaplessPlayback = false,
-        super(key: key);
+        gaplessPlayback = false;
+
+  static const double defaultPanInertia = .2;
 
   final Decoration? backgroundDecoration;
   final ImageProvider? imageProvider;
@@ -97,9 +89,6 @@ class PhotoViewCore extends StatefulWidget {
   final PhotoViewImageTapUpCallback? onTapUp;
   final PhotoViewImageTapDownCallback? onTapDown;
   final PhotoViewImageScaleEndCallback? onScaleEnd;
-  final bool? enableDoubleTapZoom;
-  final bool? enableTapDragZoom;
-  final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
   final HitTestBehavior? gestureDetectorBehavior;
   final bool tightMode;
   final bool disableGestures;
@@ -121,199 +110,260 @@ class PhotoViewCoreState extends State<PhotoViewCore>
         TickerProviderStateMixin,
         PhotoViewControllerDelegate,
         HitCornersDetector {
-  Offset? _normalizedPosition;
-  double? _scaleBefore;
-  double? _rotationBefore;
+  Offset? _startFocalPoint, _lastViewportFocalPosition;
+  double? _startScale,
+      _quickScaleLastY,
+      _quickScaleLastDistance,
+      _startRotation;
+  late bool _doubleTap, _quickScaleMoved;
+  DateTime _lastScaleGestureDate = DateTime.now();
 
-  late final AnimationController _scaleAnimationController;
-  Animation<double>? _scaleAnimation;
+  late AnimationController _scaleAnimationController;
+  late Animation<double> _scaleAnimation;
 
-  late final AnimationController _positionAnimationController;
-  Animation<Offset>? _positionAnimation;
+  late AnimationController _positionAnimationController;
+  late Animation<Offset> _positionAnimation;
 
-  late final AnimationController _rotationAnimationController =
-      AnimationController(vsync: this)..addListener(handleRotationAnimation);
-  Animation<double>? _rotationAnimation;
+  late final AnimationController _rotationAnimationController;
+  late Animation<double> _rotationAnimation;
 
   PhotoViewHeroAttributes? get heroAttributes => widget.heroAttributes;
 
-  late ScaleBoundaries cachedScaleBoundaries = widget.scaleBoundaries;
+  ScaleBoundaries? cachedScaleBoundaries;
 
-  Offset? _doubleTapLocation;
+  static const _flingPointerKind = PointerDeviceKind.unknown;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleAnimationController = AnimationController(vsync: this)
+      ..addListener(handleScaleAnimation)
+      ..addStatusListener(onAnimationStatus);
+    _positionAnimationController = AnimationController(vsync: this)
+      ..addListener(handlePositionAnimate);
+    _rotationAnimationController = AnimationController(vsync: this)
+      ..addListener(handleRotationAnimation);
+
+    initDelegate();
+    addAnimateOnScaleStateUpdate(animateOnScaleStateUpdate);
+
+    cachedScaleBoundaries = widget.scaleBoundaries;
+    controller.scaleBoundaries = widget.scaleBoundaries;
+
+    // force delegate scale computing on initialization
+    // so that it does not happen lazily at the beginning of a scale animation
+    recalcScale();
+  }
+
+  @override
+  void dispose() {
+    _scaleAnimationController.dispose();
+    _positionAnimationController.dispose();
+    _rotationAnimationController.dispose();
+    super.dispose();
+  }
 
   void handleScaleAnimation() {
-    scale = _scaleAnimation!.value;
+    scale = _scaleAnimation.value;
   }
 
   void handlePositionAnimate() {
-    controller.position = _positionAnimation!.value;
+    controller.position = _positionAnimation.value;
   }
 
   void handleRotationAnimation() {
-    controller.rotation = _rotationAnimation!.value;
+    controller.rotation = _rotationAnimation.value;
   }
 
-  void onScaleStart(ScaleStartDetails details) {
-    _rotationBefore = controller.rotation;
-    _scaleBefore = scale;
-    _normalizedPosition = details.focalPoint - controller.position;
+  Stopwatch? _scaleStopwatch;
+  VelocityTracker? _velocityTracker;
+
+  void onScaleStart(ScaleStartDetails details, bool doubleTap) {
+    _scaleStopwatch = Stopwatch()..start();
+    _velocityTracker = VelocityTracker.withKind(_flingPointerKind);
+
+    _startScale = scale;
+    _startRotation = controller.rotation;
+    _startFocalPoint = details.localFocalPoint;
+    _lastViewportFocalPosition = _startFocalPoint;
+    _doubleTap = doubleTap;
+    _quickScaleLastDistance = null;
+    _quickScaleLastY = _startFocalPoint!.dy;
+    _quickScaleMoved = false;
+
     _scaleAnimationController.stop();
     _positionAnimationController.stop();
     _rotationAnimationController.stop();
   }
 
   void onScaleUpdate(ScaleUpdateDetails details) {
-    final double newScale = _scaleBefore! * details.scale;
-    final Offset delta = details.focalPoint - _normalizedPosition!;
+    final boundaries = scaleBoundaries;
 
-    if (widget.strictScale &&
-        (newScale > widget.scaleBoundaries.maxScale ||
-            newScale < widget.scaleBoundaries.minScale)) {
-      return;
+    final elapsed = _scaleStopwatch?.elapsed;
+    if (elapsed != null) {
+      _velocityTracker?.addPosition(elapsed, details.focalPoint);
     }
 
-    updateScaleStateFromNewScale(newScale);
+    double newScale;
+    if (_doubleTap) {
+      // quick scale, aka one finger zoom
+      // magic numbers from `davemorrissey/subsampling-scale-image-view`
+      final focalPointY = details.localFocalPoint.dy;
+      final distance = (focalPointY - _startFocalPoint!.dy).abs() * 2 + 20;
+      _quickScaleLastDistance ??= distance;
+      final spanDiff = (1 - (distance / _quickScaleLastDistance!)).abs() * .5;
+      _quickScaleMoved |= spanDiff > .03;
+      final factor = _quickScaleMoved
+          ? (focalPointY > _quickScaleLastY! ? (1 + spanDiff) : (1 - spanDiff))
+          : 1;
+      _quickScaleLastDistance = distance;
+      _quickScaleLastY = focalPointY;
+      newScale = scale * factor;
+    } else {
+      newScale = _startScale! * details.scale;
+    }
+    if (widget.strictScale) {
+      newScale = boundaries.clampScale(newScale);
+    }
+    newScale = max(0, newScale);
+    // focal point is in viewport coordinates
+    final scaleFocalPoint =
+        _doubleTap ? _startFocalPoint! : details.localFocalPoint;
+
+    final viewportCenter = boundaries.viewportCenter;
+    final centerContentPosition =
+        boundaries.viewportToContentPosition(controller.value, viewportCenter);
+    final scalePositionDelta =
+        (scaleFocalPoint - viewportCenter) * (scale / newScale - 1);
+    final panPositionDelta = scaleFocalPoint - _lastViewportFocalPosition!;
+
+    final newPosition = widget.enablePanAlways
+        ? (boundaries.contentToStatePosition(newScale, centerContentPosition) +
+            scalePositionDelta +
+            panPositionDelta)
+        : boundaries.clampPosition(
+            position: boundaries.contentToStatePosition(
+                    newScale, centerContentPosition) +
+                scalePositionDelta +
+                panPositionDelta,
+            scale: newScale,
+          );
 
     updateMultiple(
       scale: newScale,
-      position: widget.enablePanAlways
-          ? delta
-          : clampPosition(position: delta * details.scale),
+      position: newPosition,
       rotation:
-          widget.enableRotation ? _rotationBefore! + details.rotation : null,
+          widget.enableRotation ? _startRotation! + details.rotation : null,
       rotationFocusPoint: widget.enableRotation ? details.focalPoint : null,
     );
+
+    _lastViewportFocalPosition = scaleFocalPoint;
   }
 
   void onScaleEnd(ScaleEndDetails details) {
-    final double _scale = scale;
-    final Offset _position = controller.position;
-    final double maxScale = scaleBoundaries.maxScale;
-    final double minScale = scaleBoundaries.minScale;
+    final boundaries = scaleBoundaries;
 
-    widget.onScaleEnd?.call(context, details, controller.value);
+    final currentPosition = controller.position;
+    final currentScale = controller.scale!;
 
-    //animate back to maxScale if gesture exceeded the maxScale specified
-    if (_scale > maxScale) {
-      final double scaleComebackRatio = maxScale / _scale;
-      animateScale(_scale, maxScale);
-      final Offset clampedPosition = clampPosition(
-        position: _position * scaleComebackRatio,
-        scale: maxScale,
+    // animate back to min/max scale if gesture yielded a scale exceeding them
+    final newScale = boundaries.clampScale(currentScale);
+    if (currentScale != newScale) {
+      final newPosition = boundaries.clampPosition(
+        position: currentPosition * newScale / currentScale,
+        scale: newScale,
       );
-      animatePosition(_position, clampedPosition);
+      animateScale(currentScale, newScale);
+      animatePosition(currentPosition, newPosition);
       return;
     }
 
-    //animate back to minScale if gesture fell smaller than the minScale specified
-    if (_scale < minScale) {
-      final double scaleComebackRatio = minScale / _scale;
-      animateScale(_scale, minScale);
-      animatePosition(
-        _position,
-        clampPosition(
-          position: _position * scaleComebackRatio,
-          scale: minScale,
-        ),
-      );
-      return;
-    }
-    // get magnitude from gesture velocity
-    final double magnitude = details.velocity.pixelsPerSecond.distance;
+    // The gesture recognizer triggers a new `onScaleStart` every time a pointer/finger is added or removed.
+    // Following a pinch-to-zoom gesture, a new panning gesture may start if the user does not lift both fingers at the same time,
+    // so we dismiss such panning gestures when it looks like it followed a scaling gesture.
+    final isPanning = currentScale == _startScale &&
+        DateTime.now().difference(_lastScaleGestureDate).inMilliseconds > 100;
 
-    // animate velocity only if there is no scale change and a significant magnitude
-    if (_scaleBefore! / _scale == 1.0 && magnitude >= 400.0) {
-      final Offset direction = details.velocity.pixelsPerSecond / magnitude;
-      animatePosition(
-        _position,
-        clampPosition(position: _position + direction * 100.0),
-      );
+    // animate position only when panning without scaling
+    if (isPanning) {
+      final pps = details.velocity.pixelsPerSecond;
+      if (pps != Offset.zero) {
+        final newPosition = boundaries.clampPosition(
+          position: currentPosition + pps * PhotoViewCore.defaultPanInertia,
+          scale: currentScale,
+        );
+        if (currentPosition != newPosition) {
+          final tween = Tween<Offset>(begin: currentPosition, end: newPosition);
+          const curve = Curves.easeOutCubic;
+          _positionAnimation = tween.animate(CurvedAnimation(
+              parent: _positionAnimationController, curve: curve));
+          _positionAnimationController
+            ..duration = _getAnimationDurationForVelocity(
+                curve: curve, tween: tween, targetPixelPerSecond: pps)
+            ..forward(from: 0.0);
+        }
+      }
+    }
+
+    if (currentScale != _startScale) {
+      _lastScaleGestureDate = DateTime.now();
     }
   }
 
-  void onZoomStart(TapDragZoomStartDetails details) {
-    _rotationBefore = controller.rotation;
-    _scaleBefore = scale;
-    _normalizedPosition = details.localPoint;
-    _scaleAnimationController.stop();
-    _positionAnimationController.stop();
-    _rotationAnimationController.stop();
+  Duration _getAnimationDurationForVelocity({
+    required Cubic curve,
+    required Tween<Offset> tween,
+    required Offset targetPixelPerSecond,
+  }) {
+    assert(targetPixelPerSecond != Offset.zero);
+    // find initial animation velocity over the first 20% of the specified curve
+    const t = 0.2;
+    final animationVelocity =
+        (tween.end! - tween.begin!).distance * curve.transform(t) / t;
+    final gestureVelocity = targetPixelPerSecond.distance;
+    return Duration(
+        milliseconds: gestureVelocity != 0
+            ? (animationVelocity / gestureVelocity * 1000).round()
+            : 0);
   }
 
-  void onZoomUpdate(TapDragZoomUpdateDetails details) {
-    final Offset delta = details.localPoint - _normalizedPosition!;
-    double newScale =
-        _scaleBefore! + delta.dy / scaleBoundaries.outerSize.height * 5;
+  Alignment? _getTapAlignment(Offset viewportTapPosition) {
+    final boundaries = scaleBoundaries;
 
-    if (widget.strictScale &&
-        (newScale > widget.scaleBoundaries.maxScale ||
-            newScale < widget.scaleBoundaries.minScale)) {
-      return;
-    }
-
-    double allowedMinScale = scaleBoundaries.minScale * 0.8;
-    if (allowedMinScale <= 0.1) {
-      allowedMinScale = scaleBoundaries.minScale;
-    }
-    if (newScale < allowedMinScale) {
-      newScale = allowedMinScale;
-    }
-
-    updateScaleStateFromNewScale(newScale);
-
-    if (controller.position == Offset.zero && _scaleBefore! == 1) {
-      animatePosition(
-        Offset.zero,
-        localPosition2Offset(details.localPoint, _scaleBefore!),
-      );
-    }
-    updateMultiple(
-      scale: newScale,
-      position: localPosition2Offset(_normalizedPosition, newScale),
-    );
+    final viewportSize = boundaries.outerSize;
+    return Alignment(viewportTapPosition.dx / viewportSize.width,
+        viewportTapPosition.dy / viewportSize.height);
   }
 
-  void onZoomEnd() {
-    final double _scale = scale;
-    final Offset _position = controller.position;
-    final double maxScale = scaleBoundaries.maxScale;
-    final double minScale = scaleBoundaries.minScale;
+  Offset? _getChildTapPosition(Offset viewportTapPosition) {
+    final boundaries = scaleBoundaries;
 
-    widget.onDoubleTapZoomEnd?.call(context, controller.value);
+    return boundaries.viewportToContentPosition(
+        controller.value, viewportTapPosition);
+  }
 
-    //animate back to maxScale if gesture exceeded the maxScale specified
-    if (_scale > maxScale) {
-      final double scaleComebackRatio = maxScale / _scale;
-      animateScale(_scale, maxScale);
-      final Offset clampedPosition = clampPosition(
-        position: _position * scaleComebackRatio,
-        scale: maxScale,
-      );
-      animatePosition(_position, clampedPosition);
+  void _onTapUp(TapUpDetails details) {
+    final onTap = widget.onTapUp;
+    if (onTap == null) {
       return;
     }
 
-    //animate back to minScale if gesture fell smaller than the minScale specified
-    if (_scale < minScale) {
-      final double scaleComebackRatio = minScale / _scale;
-      animateScale(_scale, minScale);
-      animatePosition(
-        _position,
-        clampPosition(
-          position: _position * scaleComebackRatio,
-          scale: minScale,
-        ),
-      );
-      return;
+    final viewportTapPosition = details.localPosition;
+    final alignment = _getTapAlignment(viewportTapPosition);
+    final childTapPosition = _getChildTapPosition(viewportTapPosition);
+    if (alignment != null && childTapPosition != null) {
+      onTap(context, details, controller.value);
     }
   }
 
-  void onDoubleTap() {
-    nextScaleState();
-    clearPointerPosition();
+  void _onDoubleTap(TapDownDetails details) {
+    final childTapPosition = _getChildTapPosition(details.localPosition);
+    if (childTapPosition != null) {
+      nextScaleState(childTapPosition);
+    }
   }
 
-  void animateScale(double from, double to) {
+  void animateScale(double? from, double? to) {
     _scaleAnimation = Tween<double>(
       begin: from,
       end: to,
@@ -353,142 +403,85 @@ class PhotoViewCoreState extends State<PhotoViewCore>
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    initDelegate();
-    addAnimateOnScaleStateUpdate(animateOnScaleStateUpdate);
-
-    cachedScaleBoundaries = widget.scaleBoundaries;
-    controller.scaleBoundaries = widget.scaleBoundaries;
-
-    _scaleAnimationController = AnimationController(vsync: this)
-      ..addListener(handleScaleAnimation)
-      ..addStatusListener(onAnimationStatus);
-    _positionAnimationController = AnimationController(vsync: this)
-      ..addListener(handlePositionAnimate);
-  }
-
-  void animateOnScaleStateUpdate(double prevScale, double nextScale) {
+  void animateOnScaleStateUpdate(
+    double? prevScale,
+    double? nextScale,
+    Offset nextPosition,
+  ) {
     animateScale(prevScale, nextScale);
-    if (nextScale < prevScale ||
-        _doubleTapLocation == null ||
-        widget.enableDoubleTapZoom == false) {
-      animatePosition(controller.position, Offset.zero);
-    } else {
-      animatePosition(
-        controller.position,
-        localPosition2Offset(_doubleTapLocation, nextScale),
-      );
-    }
-    animateRotation(controller.rotation, 0.0);
-
-    clearPointerPosition();
-  }
-
-  @override
-  void dispose() {
-    _scaleAnimationController.removeStatusListener(onAnimationStatus);
-    _scaleAnimationController.dispose();
-    _positionAnimationController.dispose();
-    _rotationAnimationController.dispose();
-    super.dispose();
-  }
-
-  void onTapUp(TapUpDetails details) {
-    widget.onTapUp?.call(context, details, controller.value);
-  }
-
-  void onTapDown(TapDownDetails details) {
-    widget.onTapDown?.call(context, details, controller.value);
+    animatePosition(controller.position, nextPosition);
+    animateRotation(controller.rotation, 0);
   }
 
   @override
   Widget build(BuildContext context) {
     // Check if we need a recalc on the scale
-    if (widget.scaleBoundaries != cachedScaleBoundaries) {
-      markNeedsScaleRecalc = true;
-      cachedScaleBoundaries = widget.scaleBoundaries;
-      controller.scaleBoundaries = widget.scaleBoundaries;
-    }
+    // if (widget.scaleBoundaries != cachedScaleBoundaries) {
+    //   markNeedsScaleRecalc = true;
+    //   cachedScaleBoundaries = widget.scaleBoundaries;
+    //   controller.scaleBoundaries = widget.scaleBoundaries;
+    // }
 
     return StreamBuilder(
-        stream: controller.outputStateStream,
-        initialData: controller.prevValue,
-        builder: (
-          BuildContext context,
-          AsyncSnapshot<PhotoViewControllerValue> snapshot,
-        ) {
-          if (snapshot.hasData) {
-            final PhotoViewControllerValue value = snapshot.data!;
-            final useImageScale = widget.filterQuality != FilterQuality.none;
+      stream: controller.outputStateStream,
+      initialData: controller.prevValue,
+      builder: (
+        BuildContext context,
+        AsyncSnapshot<PhotoViewControllerValue> snapshot,
+      ) {
+        if (!snapshot.hasData) {
+          return const SizedBox();
+        }
 
-            final computedScale = useImageScale ? 1.0 : scale;
+        final PhotoViewControllerValue value = snapshot.data!;
 
-            final matrix = Matrix4.identity()
-              ..translate(value.position.dx, value.position.dy)
-              ..scale(computedScale)
-              ..rotateZ(value.rotation);
+        final bool useImageScale = widget.filterQuality != FilterQuality.none;
 
-            final Widget customChildLayout = CustomSingleChildLayout(
-              delegate: _CenterWithOriginalSizeDelegate(
-                scaleBoundaries.childSize,
-                basePosition,
-                useImageScale,
-              ),
-              child: _buildHero(),
-            );
+        final computedScale = useImageScale ? 1.0 : scale;
 
-            final child = Container(
-              constraints: widget.tightMode
-                  ? BoxConstraints.tight(scaleBoundaries.childSize * scale)
-                  : null,
-              child: Center(
-                child: Transform(
-                  child: customChildLayout,
-                  transform: matrix,
-                  alignment: basePosition,
-                ),
-              ),
-              decoration: widget.backgroundDecoration ?? _defaultDecoration,
-            );
+        final matrix = Matrix4.identity()
+          ..translate(value.position.dx, value.position.dy)
+          ..scale(computedScale)
+          ..rotateZ(value.rotation);
 
-            if (widget.disableGestures) {
-              return child;
-            }
+        final Widget customChildLayout = CustomSingleChildLayout(
+          delegate: _CenterWithOriginalSizeDelegate(
+            scaleBoundaries.childSize,
+            basePosition,
+            useImageScale,
+          ),
+          child: _buildHero(),
+        );
 
-            return PhotoViewGestureDetector(
-              child: child,
-              onDoubleTapDown: (widget.enableDoubleTapZoom != false ||
-                      widget.enableTapDragZoom == true)
-                  ? recordPointerPosition
-                  : null,
-              onDoubleTap:
-                  widget.enableDoubleTapZoom != false ? onDoubleTap : null,
-              onDoubleTapCancel: (widget.enableDoubleTapZoom != false ||
-                      widget.enableTapDragZoom == true)
-                  ? clearPointerPosition
-                  : null,
-              onScaleStart: onScaleStart,
-              onScaleUpdate: onScaleUpdate,
-              onScaleEnd: onScaleEnd,
-              onZoomStart:
-                  widget.enableTapDragZoom == true ? onZoomStart : null,
-              onZoomUpdate:
-                  widget.enableTapDragZoom == true ? onZoomUpdate : null,
-              onZoomEnd: widget.enableTapDragZoom == true ? onZoomEnd : null,
-              hitDetector: this,
-              onTapUp: widget.onTapUp != null
-                  ? (details) => widget.onTapUp!(context, details, value)
-                  : null,
-              onTapDown: widget.onTapDown != null
-                  ? (details) => widget.onTapDown!(context, details, value)
-                  : null,
-            );
-          } else {
-            return Container();
-          }
-        });
+        final child = Container(
+          constraints: widget.tightMode
+              ? BoxConstraints.tight(scaleBoundaries.childSize * scale)
+              : null,
+          child: Center(
+            child: Transform(
+              child: customChildLayout,
+              transform: matrix,
+              alignment: basePosition,
+            ),
+          ),
+          decoration: widget.backgroundDecoration ?? _defaultDecoration,
+        );
+
+        if (widget.disableGestures) {
+          return child;
+        }
+
+        return PhotoViewGestureDetector(
+          hitDetector: this,
+          onScaleStart: onScaleStart,
+          onScaleUpdate: onScaleUpdate,
+          onScaleEnd: onScaleEnd,
+          onTapUp: widget.onTapUp == null ? null : _onTapUp,
+          onDoubleTap: _onDoubleTap,
+          child: child,
+        );
+      },
+    );
   }
 
   Widget _buildHero() {
@@ -515,76 +508,6 @@ class PhotoViewCoreState extends State<PhotoViewCore>
             width: scaleBoundaries.childSize.width * scale,
             fit: BoxFit.contain,
           );
-  }
-
-  void recordPointerPosition(TapDownDetails details) {
-    _doubleTapLocation = details.localPosition;
-  }
-
-  void clearPointerPosition() {
-    _doubleTapLocation = null;
-  }
-
-  Offset localPosition2Offset(Offset? position, double newScale) {
-    final double screenWidth = scaleBoundaries.outerSize.width;
-    final double screenHeight = scaleBoundaries.outerSize.height;
-
-    final double childWidth = scaleBoundaries.childSize.width;
-    final double childHeight = scaleBoundaries.childSize.height;
-
-    final double initScale = scaleBoundaries.initialScale;
-    final double computedInitWidth = childWidth * initScale;
-    final double computedInitHeight = childHeight * initScale;
-
-    final double computedNewWidth = childWidth * newScale;
-    final double computedNewHeight = childHeight * newScale;
-
-    final Offset _position =
-        position ?? Offset(screenWidth / 2, screenHeight / 2);
-
-    final double posToScreenWidth = _position.dx / screenWidth;
-    final double posToScreenHeight = _position.dy / screenHeight;
-    double posToScreenAlignedRatioX = alignRatioX(posToScreenWidth);
-    double posToScreenAlignedRatioY = alignRatioY(posToScreenHeight);
-
-    if (scale < scaleBoundaries.coveringScale) {
-      // clamp values in cases when image with initScale is smaller than screen and position could be outside of screen
-      final double initImageToScreenRatioX = computedInitWidth / screenWidth;
-      final double initImageToScreenRatioY = computedInitHeight / screenHeight;
-
-      posToScreenAlignedRatioX /= initImageToScreenRatioX;
-      posToScreenAlignedRatioY /= initImageToScreenRatioY;
-    }
-
-    final double _x = posToScreenAlignedRatioX * computedNewWidth;
-    final double _y = posToScreenAlignedRatioY * computedNewHeight;
-
-    return Offset(
-      -1 * _x,
-      -1 * _y,
-    );
-  }
-
-  double alignRatioX(double t) {
-    final double alignmentMinX = ((basePosition.x - 1).abs() / 2) * -1;
-    final double alignmentMaxX = (basePosition.x + 1).abs() / 2;
-
-    return lerpDouble(
-      alignmentMinX,
-      alignmentMaxX,
-      t,
-    )!;
-  }
-
-  double alignRatioY(double t) {
-    final double alignmentMinY = ((basePosition.y - 1).abs() / 2) * -1;
-    final double alignmentMaxY = (basePosition.y + 1).abs() / 2;
-
-    return lerpDouble(
-      alignmentMinY,
-      alignmentMaxY,
-      t,
-    )!;
   }
 }
 

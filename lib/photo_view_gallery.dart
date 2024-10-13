@@ -6,7 +6,6 @@ import 'package:photo_view/photo_view.dart'
     show
         LoadingBuilder,
         PhotoView,
-        PhotoViewDoubleTapZoomEndCallback,
         PhotoViewImageScaleEndCallback,
         PhotoViewImageTapDownCallback,
         PhotoViewImageTapUpCallback,
@@ -117,7 +116,7 @@ class PhotoViewGallery extends StatefulWidget {
     this.scaleStateChangedCallback,
     this.enableRotation = false,
     this.scrollPhysics,
-    this.scrollDirection = Axis.horizontal,
+    this.scrollDirection = const [Axis.horizontal],
     this.customSize,
     this.allowImplicitScrolling = false,
   })  : itemCount = null,
@@ -142,7 +141,7 @@ class PhotoViewGallery extends StatefulWidget {
     this.scaleStateChangedCallback,
     this.enableRotation = false,
     this.scrollPhysics,
-    this.scrollDirection = Axis.horizontal,
+    this.scrollDirection = const [Axis.horizontal],
     this.customSize,
     this.allowImplicitScrolling = false,
   })  : pageOptions = null,
@@ -195,7 +194,7 @@ class PhotoViewGallery extends StatefulWidget {
   final Size? customSize;
 
   /// The axis along which the [PageView] scrolls. Mirror to [PageView.scrollDirection]
-  final Axis scrollDirection;
+  final List<Axis> scrollDirection;
 
   /// When user attempts to move it to the next element, focus will traverse to the next page in the page view.
   final bool allowImplicitScrolling;
@@ -241,7 +240,7 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
         onPageChanged: widget.onPageChanged,
         itemCount: itemCount,
         itemBuilder: _buildItem,
-        scrollDirection: widget.scrollDirection,
+        scrollDirection: widget.scrollDirection.first,
         physics: widget.scrollPhysics,
         allowImplicitScrolling: widget.allowImplicitScrolling,
       ),
@@ -272,9 +271,6 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             onTapUp: pageOption.onTapUp,
             onTapDown: pageOption.onTapDown,
             onScaleEnd: pageOption.onScaleEnd,
-            enableDoubleTapZoom: pageOption.enableDoubleTapZoom,
-            onDoubleTapZoomEnd: pageOption.onDoubleTapZoomEnd,
-            enableTapDragZoom: pageOption.enableTapDragZoom,
             gestureDetectorBehavior: pageOption.gestureDetectorBehavior,
             tightMode: pageOption.tightMode,
             filterQuality: pageOption.filterQuality,
@@ -302,9 +298,6 @@ class _PhotoViewGalleryState extends State<PhotoViewGallery> {
             onTapUp: pageOption.onTapUp,
             onTapDown: pageOption.onTapDown,
             onScaleEnd: pageOption.onScaleEnd,
-            enableDoubleTapZoom: pageOption.enableDoubleTapZoom,
-            onDoubleTapZoomEnd: pageOption.onDoubleTapZoomEnd,
-            enableTapDragZoom: pageOption.enableTapDragZoom,
             gestureDetectorBehavior: pageOption.gestureDetectorBehavior,
             tightMode: pageOption.tightMode,
             filterQuality: pageOption.filterQuality,
@@ -347,9 +340,6 @@ class PhotoViewGalleryPageOptions {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     this.gestureDetectorBehavior,
     this.tightMode,
     this.filterQuality,
@@ -374,9 +364,6 @@ class PhotoViewGalleryPageOptions {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     this.gestureDetectorBehavior,
     this.tightMode,
     this.filterQuality,
@@ -428,13 +415,6 @@ class PhotoViewGalleryPageOptions {
 
   /// Mirror to [PhotoView.onScaleEnd]
   final PhotoViewImageScaleEndCallback? onScaleEnd;
-
-  final bool? enableDoubleTapZoom;
-
-  final bool? enableTapDragZoom;
-
-  /// Mirror to [PhotoView.onDoubleTapZoomEnd]
-  final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
 
   /// Mirror to [PhotoView.gestureDetectorBehavior]
   final HitTestBehavior? gestureDetectorBehavior;

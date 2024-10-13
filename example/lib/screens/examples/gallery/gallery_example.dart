@@ -75,7 +75,8 @@ class _GalleryExampleState extends State<GalleryExample> {
             color: Colors.black,
           ),
           initialIndex: index,
-          scrollDirection: verticalGallery ? Axis.vertical : Axis.horizontal,
+          scrollDirection:
+              verticalGallery ? [Axis.vertical] : [Axis.horizontal],
         ),
       ),
     );
@@ -90,7 +91,7 @@ class GalleryPhotoViewWrapper extends StatefulWidget {
     this.maxScale,
     this.initialIndex = 0,
     required this.galleryItems,
-    this.scrollDirection = Axis.horizontal,
+    this.scrollDirection = const [Axis.horizontal],
   }) : pageController = PageController(initialPage: initialIndex);
 
   final LoadingBuilder? loadingBuilder;
@@ -100,7 +101,7 @@ class GalleryPhotoViewWrapper extends StatefulWidget {
   final int initialIndex;
   final PageController pageController;
   final List<GalleryExampleItem> galleryItems;
-  final Axis scrollDirection;
+  final List<Axis> scrollDirection;
 
   @override
   State<StatefulWidget> createState() {

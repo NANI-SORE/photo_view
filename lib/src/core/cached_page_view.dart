@@ -54,7 +54,7 @@ class _CachedPageViewState extends State<CachedPageView> {
   @override
   void initState() {
     super.initState();
-    _lastReportedPage = widget.controller.initialPage;
+    _lastReportedPage = widget.controller?.initialPage ?? 0;
   }
 
   AxisDirection _getDirection(BuildContext context) {
@@ -115,7 +115,7 @@ class _CachedPageViewState extends State<CachedPageView> {
             clipBehavior: widget.clipBehavior,
             slivers: <Widget>[
               SliverFillViewport(
-                viewportFraction: widget.controller.viewportFraction,
+                viewportFraction: widget.controller?.viewportFraction ?? 1,
                 delegate: widget.childrenDelegate,
                 padEnds: widget.padEnds,
               ),

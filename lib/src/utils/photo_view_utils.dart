@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-import 'dart:ui' show Size;
+import 'dart:math';
 
-import "package:photo_view/src/photo_view_computed_scale.dart";
-import 'package:photo_view/src/photo_view_scale_state.dart';
+import 'package:flutter/widgets.dart';
+import 'package:photo_view/photo_view.dart';
 
 /// Given a [PhotoViewScaleState], returns a scale value considering [scaleBoundaries].
 double getScaleForScaleState(
@@ -58,6 +57,8 @@ class ScaleBoundaries {
   final Size outerSize;
   final Size childSize;
 
+  static const Alignment basePosition = Alignment.center;
+
   double get minScale {
     assert(_minScale is double || _minScale is PhotoViewComputedScale);
     if (_minScale == PhotoViewComputedScale.contained) {
@@ -90,7 +91,7 @@ class ScaleBoundaries {
                   .multiplier)
           .clamp(minScale, double.infinity);
     }
-    return _maxScale.clamp(minScale, double.infinity);
+    return (_maxScale as double).clamp(minScale, double.infinity);
   }
 
   double get initialScale {
@@ -105,7 +106,7 @@ class ScaleBoundaries {
           (_initialScale as PhotoViewComputedScale) // ignore: avoid_as
               .multiplier;
     }
-    return _initialScale.clamp(minScale, maxScale);
+    return (_initialScale as double).clamp(minScale, maxScale);
   }
 
   @override
@@ -130,6 +131,75 @@ class ScaleBoundaries {
       _initialScale.hashCode ^
       outerSize.hashCode ^
       childSize.hashCode;
+
+  double clampScale(double scale) {
+    return scale.clamp(minScale, maxScale);
+  }
+
+  Offset clampPosition({required Offset position, required double scale}) {
+    final computedWidth = childSize.width * scale;
+    final computedHeight = childSize.height * scale;
+
+    final viewportWidth = outerSize.width;
+    final viewportHeight = outerSize.height;
+
+    var finalX = 0.0;
+    if (viewportWidth < computedWidth) {
+      final range = getXEdges(scale: scale);
+      finalX = position.dx.clamp(range.min, range.max);
+    }
+
+    var finalY = 0.0;
+    if (viewportHeight < computedHeight) {
+      final range = getYEdges(scale: scale);
+      finalY = position.dy.clamp(range.min, range.max);
+    }
+
+    return Offset(finalX, finalY);
+  }
+
+  double get originalScale {
+    final view = WidgetsBinding.instance.platformDispatcher.views.firstOrNull;
+    return 1.0 / (view?.devicePixelRatio ?? 1.0);
+  }
+
+  Offset get viewportCenter => outerSize.center(Offset.zero);
+
+  Offset get _contentCenter => childSize.center(Offset.zero);
+
+  Offset viewportToContentPosition(
+      PhotoViewControllerValue value, Offset viewportPosition) {
+    return (viewportPosition - viewportCenter - value.position) / value.scale! +
+        _contentCenter;
+  }
+
+  Offset contentToStatePosition(double scale, Offset contentPosition) {
+    return (_contentCenter - contentPosition) * scale;
+  }
+
+  CornersRange getXEdges({required double scale}) {
+    final computedWidth = childSize.width * scale;
+    final viewportWidth = outerSize.width;
+
+    final positionX = basePosition.x;
+    final widthDiff = computedWidth - viewportWidth;
+
+    final minX = ((positionX - 1).abs() / 2) * widthDiff * -1;
+    final maxX = ((positionX + 1).abs() / 2) * widthDiff;
+    return CornersRange(minX, maxX);
+  }
+
+  CornersRange getYEdges({required double scale}) {
+    final computedHeight = childSize.height * scale;
+    final viewportHeight = outerSize.height;
+
+    final positionY = basePosition.y;
+    final heightDiff = computedHeight - viewportHeight;
+
+    final minY = ((positionY - 1).abs() / 2) * heightDiff * -1;
+    final maxY = ((positionY + 1).abs() / 2) * heightDiff;
+    return CornersRange(minY, maxY);
+  }
 }
 
 double _scaleForContained(Size size, Size childSize) {
@@ -139,7 +209,7 @@ double _scaleForContained(Size size, Size childSize) {
   final double screenWidth = size.width;
   final double screenHeight = size.height;
 
-  return math.min(screenWidth / imageWidth, screenHeight / imageHeight);
+  return min(screenWidth / imageWidth, screenHeight / imageHeight);
 }
 
 double _scaleForCovering(Size size, Size childSize) {
@@ -149,7 +219,7 @@ double _scaleForCovering(Size size, Size childSize) {
   final double screenWidth = size.width;
   final double screenHeight = size.height;
 
-  return math.max(screenWidth / imageWidth, screenHeight / imageHeight);
+  return max(screenWidth / imageWidth, screenHeight / imageHeight);
 }
 
 double _clampSize(double size, ScaleBoundaries scaleBoundaries) {

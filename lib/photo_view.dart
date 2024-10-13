@@ -255,9 +255,6 @@ class PhotoView extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     this.customSize,
     this.gestureDetectorBehavior,
     this.tightMode,
@@ -295,9 +292,6 @@ class PhotoView extends StatefulWidget {
     this.onTapUp,
     this.onTapDown,
     this.onScaleEnd,
-    this.enableDoubleTapZoom,
-    this.onDoubleTapZoomEnd,
-    this.enableTapDragZoom,
     this.customSize,
     this.gestureDetectorBehavior,
     this.tightMode,
@@ -399,12 +393,6 @@ class PhotoView extends StatefulWidget {
   /// A pointer that will trigger a scale has stopped contacting the screen at a
   /// particular location.
   final PhotoViewImageScaleEndCallback? onScaleEnd;
-
-  final bool? enableDoubleTapZoom;
-
-  final bool? enableTapDragZoom;
-
-  final PhotoViewDoubleTapZoomEndCallback? onDoubleTapZoomEnd;
 
   /// [HitTestBehavior] to be passed to the internal gesture detector.
   final HitTestBehavior? gestureDetectorBehavior;
@@ -541,9 +529,6 @@ class _PhotoViewState extends State<PhotoView>
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
                 onScaleEnd: widget.onScaleEnd,
-                enableDoubleTapZoom: widget.enableDoubleTapZoom,
-                onDoubleTapZoomEnd: widget.onDoubleTapZoomEnd,
-                enableTapDragZoom: widget.enableTapDragZoom,
                 outerSize: computedOuterSize,
                 gestureDetectorBehavior: widget.gestureDetectorBehavior,
                 tightMode: widget.tightMode,
@@ -571,9 +556,6 @@ class _PhotoViewState extends State<PhotoView>
                 onTapUp: widget.onTapUp,
                 onTapDown: widget.onTapDown,
                 onScaleEnd: widget.onScaleEnd,
-                enableDoubleTapZoom: widget.enableDoubleTapZoom,
-                onDoubleTapZoomEnd: widget.onDoubleTapZoomEnd,
-                enableTapDragZoom: widget.enableTapDragZoom,
                 outerSize: computedOuterSize,
                 gestureDetectorBehavior: widget.gestureDetectorBehavior,
                 tightMode: widget.tightMode,
